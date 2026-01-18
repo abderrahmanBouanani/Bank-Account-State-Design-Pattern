@@ -1,0 +1,229 @@
+\documentclass[11pt, a4paper]{article}
+
+% ========================================
+% PACKAGES
+% ========================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+% Configuration des liens
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
+
+% Configuration pour le code
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=4
+}
+\lstset{style=mystyle}
+\renewcommand{\lstlistingname}{Code}
+
+% ========================================
+% SETUP HEADER/FOOTER
+% ========================================
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\fancyhf{}
+\fancyfoot[L]{BOUANANI}
+\fancyfoot[R]{\textbf{Page \thepage/\pageref{LastPage}}}
+\parindent=0cm
+
+% ========================================
+% VARIABLES
+% ========================================
+\newcommand{\monTitre}{Rapport TP: State & Builder Patterns}
+\newcommand{\monSousTitre}{Gestion d'états d'un compte bancaire}
+\newcommand{\maFiliere}{Génie Informatique}
+\newcommand{\monAnnee}{2025-2026}
+\newcommand{\monEtudiantUn}{BOUANANI}
+\newcommand{\monProfesseur}{Prof. Encadrant}
+
+\begin{document}
+
+% ========================================
+% PAGE DE GARDE
+% ========================================
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \includegraphics[width=0.4\textwidth]{figures/ENSAA.png} \hfill
+    \includegraphics[width=0.4\textwidth]{figures/UIZ.png}
+    \vspace{2cm}
+    
+    {\scshape\LARGE École Nationale des Sciences Appliquées d'Agadir\par}
+    \vspace{0.5cm}
+    {\scshape\Large \maFiliere\par}
+    \vspace{1.5cm}
+    
+    {\huge\bfseries \monTitre\par}
+    \vspace{0.5cm}
+    {\Large\bfseries \monSousTitre\par}
+    \vspace{2cm}
+    
+    \large
+    \textit{Réalisé par :} \\
+    \vspace{0.5cm}
+    \textbf{\monEtudiantUn} \\
+    
+    \vspace{0.5cm}
+    \textit{Encadré par :} \\
+    \textbf{\monProfesseur}
+
+    \vfill
+    {\large Année Universitaire : \monAnnee\par}
+    \vspace{1cm}
+    {\large Date : \today\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ========================================
+% CONTENU
+% ========================================
+
+\section{Introduction}
+Ce TP a pour objectif de mettre en œuvre deux patrons de conception (Design Patterns) fondamentaux : le patron \textbf{State} et le patron \textbf{Builder}.
+Nous appliquons ces concepts à un cas concret de gestion de comptes bancaires. Un compte peut avoir différents états (Normal, Bloqué, Découvert) influençant son comportement (retraits, dépôts). De plus, nous implémentons un gestionnaire de transitions flexible utilisant le pattern Builder pour définir dynamiquement les règles de passage d'un état à un autre.
+
+\section{Le Patron State (État)}
+
+\subsection{Concept}
+Le patron State permet à un objet de modifier son comportement lorsque son état interne change. L'objet donnera l'impression de changer de classe. Dans notre cas, la classe \texttt{Compte} délègue les opérations \texttt{retirer} et \texttt{deposer} à un objet implémentant l'interface \texttt{EtatCompte}.
+
+\subsection{Implémentation}
+
+\subsubsection{L'interface EtatCompte}
+Cette interface définit le contrat que tous les états doivent respecter.
+
+\begin{lstlisting}[language=Java, caption=Interface EtatCompte]
+public interface EtatCompte {
+    void retirer(double montant, Compte compte) throws Exception;
+    void deposer(double montant, Compte compte);
+    String getEtatName();
+}
+\end{lstlisting}
+
+\subsubsection{Les États Concrets}
+Nous avons implémenté trois états :
+\begin{itemize}
+    \item \textbf{CompteNormal} : État standard avec autorisation de retrait simple.
+    \item \textbf{CompteDecouvert} : Affiche un avertissement lors des retraits.
+    \item \textbf{CompteBloque} : Interdit formellement les retraits (lève une exception).
+\end{itemize}
+
+Exemple de \texttt{CompteBloque} :
+\begin{lstlisting}[language=Java, caption=Classe CompteBloque]
+public class CompteBloque implements EtatCompte {
+    @Override
+    public void retirer(double montant, Compte compte) throws Exception {
+        System.out.println("Activité refusée : Compte Bloqué !");
+        throw new Exception("Opération refusée : Compte Bloqué !");
+    }
+    // ... méthode deposer et getEtatName
+}
+\end{lstlisting}
+
+\section{Gestion des Transitions et Pattern Builder}
+
+\subsection{EtatTransitionManager}
+Pour éviter de coder les transitions "en dur" dans les classes d'état (ce qui créerait un couplage fort), nous avons créé une classe \texttt{EtatTransitionManager}. Cette classe centralise la logique de changement d'état.
+
+Elle utilise une liste de règles (\texttt{Transition}) définies par :
+\begin{itemize}
+    \item L'état source.
+    \item L'état cible.
+    \item Une condition (\texttt{Predicate<Compte>}).
+\end{itemize}
+
+\begin{lstlisting}[language=Java, caption=Vérification des transitions dans EtatTransitionManager]
+public EtatCompte checkTransition(Compte compte) {
+    EtatCompte etatActuel = compte.getEtat();
+    for (Transition t : transitions) {
+        if (t.source.equals(etatActuel.getClass()) && t.condition.test(compte)) {
+            try {
+                return t.cible.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                // Gestion d'erreur...
+            }
+        }
+    }
+    return etatActuel;
+}
+\end{lstlisting}
+
+\subsection{Le Builder}
+Pour faciliter la configuration des transitions, nous utilisons une classe interne statique \texttt{Builder}. Cela permet de définir les règles de manière fluide et lisible.
+
+\begin{lstlisting}[language=Java, caption=Usage du Builder]
+EtatTransitionManager manager = new EtatTransitionManager.Builder()
+    .addTransition(CompteNormal.class, CompteDecouvert.class, c -> c.getSolde() < 0)
+    .addTransition(CompteDecouvert.class, CompteNormal.class, c -> c.getSolde() > 0)
+    .build();
+\end{lstlisting}
+
+\section{Classe Compte : L'Intégration}
+La classe \texttt{Compte} est le contexte qui maintient une référence vers l'état courant et le gestionnaire de transitions.
+
+À chaque opération (\texttt{retirer} ou \texttt{deposer}) :
+\begin{enumerate}
+    \item La requête est déléguée à l'état actuel.
+    \item Le solde est mis à jour.
+    \item La méthode \texttt{verifierChangementEtat()} est appelée pour interroger le \texttt{manager}.
+\end{enumerate}
+
+\begin{lstlisting}[language=Java, caption=Méthode retirer de la classe Compte]
+public void retirer(double montant) {
+    try {
+        etat.retirer(montant, this);
+        this.solde -= montant;
+        verifierChangementEtat();
+    } catch (Exception e) {
+        System.out.println("Erreur : " + e.getMessage());
+    }
+}
+\end{lstlisting}
+
+\section{Conclusion}
+Ce TP nous a permis de comprendre l'intérêt des design patterns pour créer des architectures souples et maintenables.
+\begin{itemize}
+    \item Le pattern \textbf{State} nous a permis de respecter le principe \textit{Open/Closed} : nous pouvons ajouter de nouveaux états sans modifier la classe \texttt{Compte}.
+    \item Le pattern \textbf{Builder} couplé au \texttt{TransitionManager} a externalisé la logique de transition, rendant le système de règles dynamique et facilement configurable.
+\end{itemize}
+
+\end{document}

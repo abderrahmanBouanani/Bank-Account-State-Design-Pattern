@@ -1,0 +1,253 @@
+C'est compris. Voici le code **complet et corrigé** pour correspondre exactement à la signature de votre classe de test `CompteTest`.
+
+L'architecture respecte les contraintes suivantes :
+
+1. **Faible couplage** : Les états ne connaissent pas les règles de transition.
+2. **Transition Manager & Builder** : C'est le manager qui stocke les règles `(Source -> Cible si Condition)`.
+3. **Réflexion Java** : Puisque le test utilise `.class` (ex: `CompteNormal.class`), le manager utilisera la réflexion pour instancier les nouveaux états.
+
+Voici les 6 fichiers nécessaires.
+
+### 1. L'Interface (`EtatCompte.java`)
+
+Elle définit les actions et permet de récupérer le nom pour les tests.
+
+```java
+public interface EtatCompte {
+    // Valide ou effectue le retrait. Lève une exception si interdit.
+    void retirer(double montant, Compte compte) throws Exception;
+    
+    // Valide ou effectue le dépôt.
+    void deposer(double montant, Compte compte);
+    
+    // Pour les assertions JUnit (ex: "CompteNormal")
+    String getEtatName();
+}
+
+```
+
+### 2. Les États Concrets (`CompteNormal`, `CompteDecouvert`, `CompteBloque`)
+
+Ces classes doivent avoir un **constructeur vide** par défaut (implicite ou explicite) pour que le manager puisse les créer dynamiquement.
+
+```java
+// Fichier: CompteNormal.java
+public class CompteNormal implements EtatCompte {
+    @Override
+    public void retirer(double montant, Compte compte) {
+        // En normal, pas de blocage spécifique
+    }
+
+    @Override
+    public void deposer(double montant, Compte compte) {
+        // Dépôt autorisé
+    }
+
+    @Override
+    public String getEtatName() {
+        return "CompteNormal";
+    }
+}
+
+```
+
+```java
+// Fichier: CompteDecouvert.java
+public class CompteDecouvert implements EtatCompte {
+    @Override
+    public void retirer(double montant, Compte compte) {
+        // En découvert, on autorise encore le retrait (jusqu'à la limite bloquante)
+        System.out.println("Attention: Compte à découvert");
+    }
+
+    @Override
+    public void deposer(double montant, Compte compte) {
+    }
+
+    @Override
+    public String getEtatName() {
+        return "CompteDecouvert";
+    }
+}
+
+```
+
+```java
+// Fichier: CompteBloque.java
+public class CompteBloque implements EtatCompte {
+    @Override
+    public void retirer(double montant, Compte compte) throws Exception {
+        // C'est ici qu'on empêche l'action
+        throw new Exception("Opération refusée : Compte Bloqué !");
+    }
+
+    @Override
+    public void deposer(double montant, Compte compte) {
+        // On peut toujours déposer pour débloquer la situation
+    }
+
+    @Override
+    public String getEtatName() {
+        return "CompteBloque";
+    }
+}
+
+```
+
+### 3. Le Gestionnaire et son Builder (`EtatTransitionManager.java`)
+
+C'est le cœur de la logique demandée par votre test. Il stocke les transitions sous forme de "Source + Cible + Condition".
+
+```java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Predicate;
+
+public class EtatTransitionManager {
+
+    // Classe interne pour stocker une règle de transition
+    private static class Transition {
+        Class<? extends EtatCompte> source; // L'état de départ (ex: CompteNormal.class)
+        Class<? extends EtatCompte> cible;  // L'état d'arrivée (ex: CompteDecouvert.class)
+        Predicate<Compte> condition;        // La condition (ex: solde < 0)
+
+        public Transition(Class<? extends EtatCompte> source, Class<? extends EtatCompte> cible, Predicate<Compte> condition) {
+            this.source = source;
+            this.cible = cible;
+            this.condition = condition;
+        }
+    }
+
+    private List<Transition> transitions;
+
+    // Constructeur privé, accessible uniquement via le Builder
+    private EtatTransitionManager(List<Transition> transitions) {
+        this.transitions = transitions;
+    }
+
+    // Méthode principale appelée par le Compte après chaque opération
+    public EtatCompte checkTransition(Compte compte) {
+        EtatCompte etatActuel = compte.getEtat();
+
+        // On parcourt la liste des transitions configurées
+        for (Transition t : transitions) {
+            // 1. Est-ce qu'on est dans l'état source de cette règle ?
+            // 2. Est-ce que la condition est vraie ?
+            if (t.source.equals(etatActuel.getClass()) && t.condition.test(compte)) {
+                try {
+                    // Si oui, on crée une nouvelle instance de l'état cible
+                    // ex: new CompteDecouvert()
+                    return t.cible.getDeclaredConstructor().newInstance();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Erreur lors de la création de l'état : " + t.cible.getName());
+                }
+            }
+        }
+        
+        // Si aucune règle ne s'applique, on reste dans l'état actuel
+        return etatActuel;
+    }
+
+    // --- LE BUILDER (Statique) ---
+    public static class Builder {
+        private List<Transition> transitions = new ArrayList<>();
+
+        // Méthode correspondant exactement à votre test :
+        // .addTransition(CompteNormal.class, CompteDecouvert.class, c -> c.getSolde() < 0)
+        public Builder addTransition(Class<? extends EtatCompte> source, Class<? extends EtatCompte> cible, Predicate<Compte> condition) {
+            transitions.add(new Transition(source, cible, condition));
+            return this;
+        }
+
+        public EtatTransitionManager build() {
+            return new EtatTransitionManager(transitions);
+        }
+    }
+}
+
+```
+
+### 4. Le Contexte (`Compte.java`)
+
+C'est la classe utilisée par l'utilisateur. Elle délègue au manager la responsabilité de changer l'état.
+
+```java
+public class Compte {
+    private double solde;
+    private EtatCompte etat;
+    private EtatTransitionManager manager;
+
+    // Constructeur correspondant au test : new Compte(manager)
+    public Compte(EtatTransitionManager manager) {
+        this.manager = manager;
+        this.solde = 0.0;
+        // État initial par défaut (non spécifié dans le builder, on suppose Normal)
+        this.etat = new CompteNormal();
+    }
+
+    public void retirer(double montant) {
+        try {
+            // 1. On vérifie si l'état actuel autorise le retrait
+            etat.retirer(montant, this);
+
+            // 2. Si pas d'exception, on effectue le retrait
+            this.solde -= montant;
+
+            // 3. On vérifie s'il faut changer d'état
+            verifierChangementEtat();
+
+        } catch (Exception e) {
+            // On capture l'exception (ex: CompteBloqué) pour ne pas crasher le programme
+            // Dans un vrai cas, on pourrait la logger ou la relancer
+            System.out.println("Erreur : " + e.getMessage());
+        }
+    }
+
+    public void deposer(double montant) {
+        // 1. Action de l'état (souvent vide pour déposer)
+        etat.deposer(montant, this);
+
+        // 2. Mise à jour du solde
+        this.solde += montant;
+
+        // 3. Vérification des transitions (ex: Bloqué -> Normal)
+        verifierChangementEtat();
+    }
+
+    // Méthode privée pour appeler le manager
+    private void verifierChangementEtat() {
+        EtatCompte nouvelEtat = manager.checkTransition(this);
+        
+        // Si l'objet retourné est une nouvelle instance (différente de l'actuelle)
+        if (nouvelEtat.getClass() != etat.getClass()) {
+            this.etat = nouvelEtat;
+            // Optionnel : Debug
+            // System.out.println("    -> Transition vers : " + etat.getEtatName());
+        }
+    }
+
+    // Getters nécessaires pour le test et les conditions (Predicate)
+    public double getSolde() {
+        return solde;
+    }
+
+    public EtatCompte getEtat() {
+        return etat;
+    }
+
+    public String getEtatName() {
+        return etat.getEtatName();
+    }
+}
+
+```
+
+### Résumé de fonctionnement
+
+Avec ce code, votre test `CompteTest` fonctionnera car :
+
+1. Le `Builder` accepte les `.class` et les Prédicats.
+2. `Compte` s'initialise avec le manager.
+3. À chaque `retirer(100)`, le solde change, puis `manager.checkTransition(this)` est appelé.
+4. Si le solde passe sous 0, le manager détecte la règle `CompteNormal.class -> CompteDecouvert.class` et retourne une nouvelle instance de `CompteDecouvert`.

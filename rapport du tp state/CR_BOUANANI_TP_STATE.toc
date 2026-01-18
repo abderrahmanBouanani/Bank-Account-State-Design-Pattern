@@ -1,0 +1,12 @@
+\babel@toc {french}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
+\contentsline {section}{\numberline {2}Le Patron State (État)}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Concept}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Implémentation}{2}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}L'interface EtatCompte}{2}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Les États Concrets}{2}{subsubsection.2.2.2}%
+\contentsline {section}{\numberline {3}Gestion des Transitions et Pattern Builder}{2}{section.3}%
+\contentsline {subsection}{\numberline {3.1}EtatTransitionManager}{2}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Le Builder}{3}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Classe Compte : L'Intégration}{3}{section.4}%
+\contentsline {section}{\numberline {5}Conclusion}{4}{section.5}%
