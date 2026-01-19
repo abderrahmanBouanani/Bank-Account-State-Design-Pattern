@@ -49,7 +49,9 @@
     showtabs=false,                  
     tabsize=4
 }
-\lstset{style=mystyle}
+\lstset{style=mystyle,
+    literate={é}{{\'e}}1 {è}{{\`e}}1 {à}{{\`a}}1 {ç}{{\c{c}}}1 {œ}{{\oe}}1 {ù}{{\`u}}1 {É}{{\'E}}1 {È}{{\`E}}1 {À}{{\`A}}1 {Ç}{{\c{C}}}1 {Œ}{{\OE}}1 {Ù}{{\`U}}1
+}
 \renewcommand{\lstlistingname}{Code}
 
 % ========================================
@@ -66,12 +68,12 @@
 % ========================================
 % VARIABLES
 % ========================================
-\newcommand{\monTitre}{Rapport TP: State & Builder Patterns}
+\newcommand{\monTitre}{Rapport TP: State \& Builder Patterns}
 \newcommand{\monSousTitre}{Gestion d'états d'un compte bancaire}
 \newcommand{\maFiliere}{DLA2}
 \newcommand{\monAnnee}{2025-2026}
 \newcommand{\monEtudiantUn}{BOUANANI Abderrahman}
-\newcommand{\monProfesseur}{Pr. Elyaakoubi Mohamed}
+\newcommand{\monProfesseur}{Pr. ELYAAKOUBI Mohamed}
 
 \begin{document}
 
@@ -123,7 +125,7 @@ Ce TP a pour objectif de mettre en œuvre deux patrons de conception (Design Pat
 Nous appliquons ces concepts à un cas concret de gestion de comptes bancaires. Un compte peut avoir différents états (Normal, Bloqué, Découvert) influençant son comportement (retraits, dépôts). De plus, nous implémentons un gestionnaire de transitions flexible utilisant le pattern Builder pour définir dynamiquement les règles de passage d'un état à un autre.
 
 \medskip
-\textbf{Dépôt GitHub :} \url{https://github.com/abderrahmanBouanani/Bank-Account-State-Design-Pattern.git}
+\textbf{Dépôt GitHub :} \href{https://github.com/abderrahmanBouanani/Bank-Account-State-Design-Pattern.git}{Lien du repository}
 
 \section{Le Patron State (État)}
 
